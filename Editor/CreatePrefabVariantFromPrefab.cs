@@ -14,6 +14,12 @@ public class CreatePrefabVariantFromPrefab : EditorWindow
     public string PrefabPath = "Assets/Temp";
     public bool isPrefab = false;
 
+    //添加预制体
+    public bool isNeedCustomComponent = false;
+    public string EditorPrefabVariantPath = "Assets/Resources/Designer";
+
+    private MonoScript customScript;
+
     [MenuItem("ArtTools/Model/创建预制体变体" , false , 122)]  
     private static void ShowWindow()  
     {  
