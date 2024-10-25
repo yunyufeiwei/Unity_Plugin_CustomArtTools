@@ -211,8 +211,6 @@ namespace yuxuetian
 
             #endregion
 
-            GUILayout.EndVertical();
-
             #region 特效属性面板绘制
 
             effectTextureProperty = EditorGUILayout.Foldout(effectTextureProperty, "特效命名规则设置");
@@ -259,27 +257,29 @@ namespace yuxuetian
 
             #region 武器属性面板绘制
 
-            weaponTextureProperty = EditorGUILayout.Foldout(weaponTextureProperty, "UI命名规则设置");
-            if (uiTextureProperty)
+            weaponTextureProperty = EditorGUILayout.Foldout(weaponTextureProperty, "武器命名规则设置");
+            if (weaponTextureProperty)
             {
                 weaponTexturePrefix = EditorGUILayout.TextField("   贴图前缀", weaponTexturePrefix);
                 weaponTextureSuffixColor = EditorGUILayout.TextField("   颜色贴图后缀", weaponTextureSuffixColor);
-                weaponTextureSuffixNormal = EditorGUILayout.TextField(" 法线贴图后缀", weaponTextureSuffixNormal);
+                weaponTextureSuffixNormal = EditorGUILayout.TextField("   法线贴图后缀", weaponTextureSuffixNormal);
                 weaponTextureSuffixMix = EditorGUILayout.TextField("   金属粗糙混合贴图", weaponTextureSuffixMix);
-                weaponTextureSuffixMask = EditorGUILayout.TextField(" 多通道混合贴图", weaponTextureSuffixMask);
+                weaponTextureSuffixMask = EditorGUILayout.TextField("   多通道混合贴图", weaponTextureSuffixMask);
                 weaponTextureSuffixGray = EditorGUILayout.TextField("   单通道(三通道一致)", weaponTextureSuffixGray);
             }
 
             if (GUILayout.Button("批处理武器贴图属性"))
             {
                 AddTextureData();
-                SettingsUITextureProperty();
+                SettingsWeaponTextureProperty();
             }
 
             GUILayout.Space(10);
 
             #endregion
 
+            GUILayout.EndVertical();
+            
             GUILayout.EndScrollView();
         }
 
@@ -689,6 +689,11 @@ namespace yuxuetian
                     else if (textureName.EndsWith(weaponTextureSuffixNormal))
                     {
                         _textureImporters[i].textureType = TextureImporterType.NormalMap;
+                        _textureImporters[i].sRGBTexture = false;
+                    }
+                    else if (textureName.EndsWith(weaponTextureSuffixMix))
+                    {
+                        _textureImporters[i].textureType = TextureImporterType.Default;
                         _textureImporters[i].sRGBTexture = false;
                     }
                     else if (textureName.EndsWith(weaponTextureSuffixMask))

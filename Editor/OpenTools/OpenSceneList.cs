@@ -85,8 +85,12 @@ namespace yuxuetian
             // 获取当前活动的场景
             Scene activeScene = SceneManager.GetActiveScene();
     
+            //方案一：
             // 查找项目中Assets目录下的所有场景文件的GUID ,并将其存在声明sceneGuids中。这里的t表示type，加一个冒号，之后输入要搜索的内容
             string[] sceneGuids = AssetDatabase.FindAssets("t:scene", new string[] { "Assets" });
+            //方案二:
+            //如果希望只看到固定的目录下的场景列表，或者使用组合的方式，可以使用下面该行代码方式
+            //string[] directories = new string[] { "Assets/Maps", "Assets/Designer" };
             
             foreach (var sceneGuid in sceneGuids)
             {
