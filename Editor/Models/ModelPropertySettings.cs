@@ -1,13 +1,24 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using UnityEngine;
 using UnityEditor;
+// using UnityEngine.Windows;
 using Object = UnityEngine.Object;
 
 namespace yuxuetian
 {
     public class ModelPropertySettings : EditorWindow
     {
+        public enum MeshCompression
+        {
+            Off,
+            Low,
+            Medium,
+            High
+        }
+        
         public enum SetIndexFormat
         {
             Atuo,
@@ -39,16 +50,25 @@ namespace yuxuetian
             Humanoid
         }
 
+        private static readonly float labelWidth = 120.0f;
+        private static readonly float labelHeight = 20.0f;
         //声明一个列表，用来存储选择的模型数据
         private List<GameObject> models = new List<GameObject>();
         private List<String> modelStrs = new List<String>();
         private List<ModelImporter> modelImoprters = new List<ModelImporter>();
 
         #region Model属性变量声明
-
-        //生命GUI变量名
+        //模型属性中,这部分的属性通常不需要,因此不开放给美术人员
+        public bool isBakeAxisConversion = false;
+        public bool isImportBlendShapes = false;
+        public bool isImportDeformPercent = false;
+        public bool isImportVisibility = false;
         public bool isImportCameras = false;
         public bool isImportLight = false;
+        public bool isPreserveHierarchy = false;
+        public bool isSortHierarchyByName = false;
+        
+        public MeshCompression meshCompression = MeshCompression.Off;
         public bool isReadWrite = false;
         public bool isOptimizeMesh = true;
         public bool isGenerateColliders = false;
@@ -61,35 +81,25 @@ namespace yuxuetian
         //定义折叠开关变量
         public bool _ModelPropertyfoldout = false;
         // private bool isIndexFormat = true;
-
         #endregion
 
         #region Rig属性变量声明
-
         public bool isRig = false;
         public SetAnimationType setAnimationType = SetAnimationType.Generic;
-
         //定义骨架折叠开关变量
         private bool _RigPropertyFoldout = false;
-
         #endregion
 
         #region Aniamtion属性变量声明
-
         public bool hasAnimation = false;
         public bool importAnimation = false;
-
         //定义模型是否带有动画的折叠开关
         private bool _AnimationPropertyFoldout = false;
-
         #endregion
 
         #region Material属性变量声明
-
         public bool isMaterial = false;
-
         private bool _MaterialPropertyFoldout = false;
-
         #endregion
 
 
@@ -116,11 +126,35 @@ namespace yuxuetian
             if (_ModelPropertyfoldout)
             {
                 //将GUI绘制在面板上
-                isImportCameras = GUILayout.Toggle(isImportCameras, "ImportCamera:(是否导入相机)");
-                isImportLight = GUILayout.Toggle(isImportLight, "ImportLights:(是否导入灯光)");
-                isReadWrite = GUILayout.Toggle(isReadWrite, "Read/Write:(是否启用读写)");
-                isOptimizeMesh = GUILayout.Toggle(isOptimizeMesh, "OptimizeMesh:(优化网格)");
-                isGenerateColliders = GUILayout.Toggle(isGenerateColliders, "GenerateColliders:(是否生成碰撞)");
+                ModelPropertySettingsGUI.BeginGroup("Scene");
+                isBakeAxisConversion = ModelPropertySettingsGUI.LabeledToggle(isBakeAxisConversion, "Bake Axis Conversion");
+                isImportBlendShapes = ModelPropertySettingsGUI.LabeledToggle(isImportBlendShapes, "Import Blend Shapes");
+                isImportCameras = ModelPropertySettingsGUI.LabeledToggle(isImportCameras, "Import Cameras");
+                isImportLight = ModelPropertySettingsGUI.LabeledToggle(isImportLight, "Import Lights");
+                // GUILayout.Label("Scene",EditorStyles.boldLabel);
+                // isBakeAxisConversion = GUILayout.Toggle(isBakeAxisConversion, "   Bake Axis Conversion");
+                // isImportBlendShapes = GUILayout.Toggle(isImportBlendShapes, "   Import Blend Shapes");
+                // isImportCameras = GUILayout.Toggle(isImportCameras, "   ImportCamera");
+                // isImportLight = GUILayout.Toggle(isImportLight, "   ImportLights");
+                
+                GUILayout.Label("Meshes" , EditorStyles.boldLabel);
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Mesh Compression" , EditorStyles.label);
+                GUILayout.FlexibleSpace(); //填充左侧剩余空间，确保右边的内容能左对齐
+                meshCompression = (MeshCompression)EditorGUILayout.EnumPopup(meshCompression);
+                GUILayout.EndHorizontal();
+                
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Read/Write" , GUILayout.Width(labelWidth));
+                isReadWrite = GUILayout.Toggle(isReadWrite, "");
+                GUILayout.EndHorizontal();
+                
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("OptimizeMesh" , GUILayout.Width(labelWidth));
+                isOptimizeMesh = GUILayout.Toggle(isOptimizeMesh, "");
+                GUILayout.EndHorizontal();
+                
+                isGenerateColliders = GUILayout.Toggle(isGenerateColliders, "   GenerateColliders");
 
                 //绘制网格索引缓冲区的位数，默认索引格式为 16 位，因为这种格式占用的内存和带宽较少。
                 GUILayout.BeginHorizontal();
@@ -154,7 +188,8 @@ namespace yuxuetian
             {
                 AddModelData();
                 SettingModelProperty();
-
+                // GetSelectedModelObjs();
+            
                 // Debug.Log("点击反馈！");
             }
 
@@ -198,11 +233,11 @@ namespace yuxuetian
             }
 
             //绘制GUI按钮，如果点击执行条件里面的内容
-            if (GUILayout.Button("执行Rig属性设置"))
-            {
-                AddModelData();
-                SettingAnimationProperty();
-            }
+             if (GUILayout.Button("执行Rig属性设置"))
+             {
+                 AddModelData();
+                 SettingAnimationProperty();
+             }
 
             GUILayout.Space(20);
 
@@ -238,39 +273,70 @@ namespace yuxuetian
         //选择模型并返回
         private Object[] GetSelectedModelObjs()
         {
-            //这里的type如果是Object类，则会连所选择的文件目录都包括，如果是GameObject则不会
-            Object[] objs = Selection.GetFiltered(typeof(GameObject), SelectionMode.DeepAssets);
-            for (int i = 0; i < objs.Length; i++)
-            {
-                //打印出来选择的所有的模型的名称
-                Debug.Log("Name" + objs[i]);
-            }
+            List<Object> allModels = new List<Object>();
+            
+            Object[] selectedObjects = Selection.objects;
 
-            return objs;
+            foreach (var obj in selectedObjects)
+            {
+                //如果是目录
+                if (obj is DefaultAsset)
+                {
+                    string path = AssetDatabase.GetAssetPath(obj);
+                    if (Directory.Exists(path))
+                    {
+                        // 递归获取目录下所有模型文件
+                        string[] modelPaths = Directory.GetFiles(path, "*.fbx", SearchOption.AllDirectories).ToArray();
+                
+                        foreach (string modelPath in modelPaths)
+                        {
+                            Object model = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
+                            if (model != null)
+                            {
+                                allModels.Add(model);
+                                Debug.Log("Found model in folder: " + modelPath);
+                            }
+                        }
+                    }
+                }
+                else if (obj is GameObject) // 如果是模型文件
+                {
+                    allModels.Add(obj);
+                    Debug.Log("Selected model: " + obj.name);
+                }
+            }
+            return allModels.ToArray();
         }
 
         private void AddModelData()
         {
+            models.Clear();
+            modelStrs.Clear();
+            modelImoprters.Clear();
+            
             //定义一个局部的数组，将选择的所有的模型添加到这个数组
-            Object[] selsetModelData = GetSelectedModelObjs();
+            Object[] selectedModelData = GetSelectedModelObjs();
 
             //遍历数组中的所有数据，并使用mesh来存储
-            foreach (GameObject mesh in selsetModelData)
+            foreach (Object obj in selectedModelData)
             {
-                //向列表中添加遍历到的mesh模型
+                GameObject mesh = obj as GameObject;
+                if (mesh == null) continue;
+        
+                // 向列表中添加遍历到的mesh模型
                 models.Add(mesh);
-            }
-
-            for (int i = 0; i < selsetModelData.Length; i++)
-            {
-                //声明变量mod，将models数组中的每一个元素作为一个GameObject来获取到
-                GameObject mod = models[i] as GameObject;
-                //从获取的GameObject中获取每个资产路径，如果不存在则为null
-                string path = AssetDatabase.GetAssetPath(mod);
-                //将每个GameObject的路径存到路径列表中
-                modelStrs.Add(path);
-                ModelImporter meshes = ModelImporter.GetAtPath(path) as ModelImporter;
-                modelImoprters.Add(meshes);
+        
+                // 获取资产路径
+                string path = AssetDatabase.GetAssetPath(mesh);
+                if (!string.IsNullOrEmpty(path))
+                {
+                    modelStrs.Add(path);
+                    ModelImporter importer = ModelImporter.GetAtPath(path) as ModelImporter;
+                    if (importer != null)
+                    {
+                        modelImoprters.Add(importer);
+                    }
+                }
             }
         }
 
@@ -280,6 +346,29 @@ namespace yuxuetian
             //循环遍历存储在模型列表中的所有元素
             for (int i = 0; i < modelImoprters.Count; i++)
             {
+                ModelImporter importer = ModelImporter.GetAtPath(modelStrs[i]) as ModelImporter;
+                if (isBakeAxisConversion == true)
+                {
+                    modelImoprters[i].bakeAxisConversion = true;
+                }
+                else
+                {
+                    modelImoprters[i].bakeAxisConversion = false;
+                }
+
+                if (isImportBlendShapes == true)
+                {
+                    modelImoprters[i].importBlendShapes = true;
+                }
+                else
+                {
+                    modelImoprters[i].importBlendShapes = false;
+                }
+                
+                modelImoprters[i].importBlendShapeDeformPercent = false;
+                modelImoprters[i].importVisibility = false;
+                modelImoprters[i].preserveHierarchy = false;
+                modelImoprters[i].sortHierarchyByName = false;
                 //设置模型是否导入相机
                 if (isImportCameras == true)
                 {
@@ -298,6 +387,23 @@ namespace yuxuetian
                 else
                 {
                     modelImoprters[i].importLights = false;
+                }
+
+                if (meshCompression == MeshCompression.Off)
+                {
+                    modelImoprters[i].meshCompression = ModelImporterMeshCompression.Off;
+                }
+                else if(meshCompression == MeshCompression.Low)
+                {
+                    modelImoprters[i].meshCompression = ModelImporterMeshCompression.Low;
+                }
+                else if(meshCompression == MeshCompression.Medium)
+                {
+                    modelImoprters[i].meshCompression = ModelImporterMeshCompression.Medium;
+                }
+                else
+                {
+                    modelImoprters[i].meshCompression = ModelImporterMeshCompression.High;
                 }
 
                 //设置模型的读写属性
@@ -408,15 +514,12 @@ namespace yuxuetian
                     modelImoprters[i].generateSecondaryUV = false;
                 }
 
-
-
+                EditorUtility.SetDirty(importer);
                 AssetDatabase.ImportAsset(modelStrs[i]);
-                AssetDatabase.Refresh();
-
                 //执行完成后对model进行保存，通常使用SaveAndReimport来应用更改
                 // modelImoprters[i].SaveAndReimport();
             }
-
+            AssetDatabase.Refresh();
         }
 
         //Rig属性设置
