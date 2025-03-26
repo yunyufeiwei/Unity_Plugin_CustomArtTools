@@ -33,6 +33,22 @@ namespace yuxuetian
             None
         }
 
+        public enum SetNormalsMode
+        {
+            Unweighted,
+            AreaWeighted,
+            AngleWeighted,
+            AreaAndAngleWeighted
+        }
+
+        public enum SetSmoothnessSource
+        {
+            PreferSmoothingGroups,
+            FromSmoothingGroups,
+            FromAngle,
+            None
+        }
+
         public enum SetTangent
         {
             Import,
@@ -55,7 +71,7 @@ namespace yuxuetian
         //声明一个列表，用来存储选择的模型数据
         private List<GameObject> models = new List<GameObject>();
         private List<String> modelStrs = new List<String>();
-        private List<ModelImporter> modelImoprters = new List<ModelImporter>();
+        private List<ModelImporter> modelImporters = new List<ModelImporter>();
 
         #region Model属性变量声明
         //模型属性中,这部分的属性通常不需要,因此不开放给美术人员
@@ -72,11 +88,19 @@ namespace yuxuetian
         public bool isReadWrite = false;
         public bool isOptimizeMesh = true;
         public bool isGenerateColliders = false;
+        
+        public bool isKeepQuads = false;
+        public bool isWeldVertices = false;
         public SetIndexFormat setIndexFormat = SetIndexFormat.UInt16;
+        public bool isLegacyBlendShapeNormals = false;
         public SetNormal setNormals = SetNormal.Import;
+        public SetNormalsMode setNormalMode = SetNormalsMode.AreaAndAngleWeighted;
+        public SetSmoothnessSource setSmoothnessSource = SetSmoothnessSource.PreferSmoothingGroups;
+        public float sliderSmoothingAngle = 60.0f;
         public SetTangent setTangents = SetTangent.CalculateMikktspace;
         public bool isSwapUVs = false;
         public bool isGenerateLightmapUVs = false;
+        public bool isStrictVertexDataChecks = false;
 
         //定义折叠开关变量
         public bool _ModelPropertyfoldout = false;
@@ -125,62 +149,39 @@ namespace yuxuetian
             _ModelPropertyfoldout = EditorGUILayout.Foldout(_ModelPropertyfoldout, "ModelProperty");
             if (_ModelPropertyfoldout)
             {
-                //将GUI绘制在面板上
                 ModelPropertySettingsGUI.BeginGroup("Scene");
                 isBakeAxisConversion = ModelPropertySettingsGUI.LabeledToggle(isBakeAxisConversion, "Bake Axis Conversion");
                 isImportBlendShapes = ModelPropertySettingsGUI.LabeledToggle(isImportBlendShapes, "Import Blend Shapes");
                 isImportCameras = ModelPropertySettingsGUI.LabeledToggle(isImportCameras, "Import Cameras");
                 isImportLight = ModelPropertySettingsGUI.LabeledToggle(isImportLight, "Import Lights");
-                // GUILayout.Label("Scene",EditorStyles.boldLabel);
-                // isBakeAxisConversion = GUILayout.Toggle(isBakeAxisConversion, "   Bake Axis Conversion");
-                // isImportBlendShapes = GUILayout.Toggle(isImportBlendShapes, "   Import Blend Shapes");
-                // isImportCameras = GUILayout.Toggle(isImportCameras, "   ImportCamera");
-                // isImportLight = GUILayout.Toggle(isImportLight, "   ImportLights");
+                ModelPropertySettingsGUI.EndGroup();
+               
+                ModelPropertySettingsGUI.BeginGroup("Mesh");
+                ModelPropertySettingsGUI.EnumPopup(meshCompression , "Mesh Compression");
+                isReadWrite = ModelPropertySettingsGUI.LabeledToggle(isReadWrite, "Read/Write");
+                isOptimizeMesh = ModelPropertySettingsGUI.LabeledToggle(isOptimizeMesh, "Optimize Mesh");
+                isGenerateColliders = ModelPropertySettingsGUI.LabeledToggle(isGenerateColliders, "Generate Colliders");
+                ModelPropertySettingsGUI.EndGroup();
+
+                ModelPropertySettingsGUI.BeginGroup("Geometry");
+                isKeepQuads = ModelPropertySettingsGUI.LabeledToggle(isKeepQuads, "Keep Quads");
+                isWeldVertices = ModelPropertySettingsGUI.LabeledToggle(isWeldVertices, "Weld Vertices");
+                setIndexFormat = ModelPropertySettingsGUI.EnumPopup(setIndexFormat , "Index Format");
+                isLegacyBlendShapeNormals = ModelPropertySettingsGUI.LabeledToggle(isLegacyBlendShapeNormals , "Legacy Blend Shape Normals");
+                setNormals = ModelPropertySettingsGUI.EnumPopup(setNormals , "Normals");
+                setNormalMode = ModelPropertySettingsGUI.EnumPopup(setNormalMode, "Normal Mode");
+                if (!isLegacyBlendShapeNormals)
+                {
+                    setSmoothnessSource = ModelPropertySettingsGUI.EnumPopup(setSmoothnessSource , "Smoothness Source");
+                }
+                //setBlendShapeNormals = ModelPropertySettingsGUI.EnumPopup(setBlendShapeNormals , "Blend Shape Normals");
                 
-                GUILayout.Label("Meshes" , EditorStyles.boldLabel);
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("Mesh Compression" , EditorStyles.label);
-                GUILayout.FlexibleSpace(); //填充左侧剩余空间，确保右边的内容能左对齐
-                meshCompression = (MeshCompression)EditorGUILayout.EnumPopup(meshCompression);
-                GUILayout.EndHorizontal();
-                
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("Read/Write" , GUILayout.Width(labelWidth));
-                isReadWrite = GUILayout.Toggle(isReadWrite, "");
-                GUILayout.EndHorizontal();
-                
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("OptimizeMesh" , GUILayout.Width(labelWidth));
-                isOptimizeMesh = GUILayout.Toggle(isOptimizeMesh, "");
-                GUILayout.EndHorizontal();
-                
-                isGenerateColliders = GUILayout.Toggle(isGenerateColliders, "   GenerateColliders");
-
-                //绘制网格索引缓冲区的位数，默认索引格式为 16 位，因为这种格式占用的内存和带宽较少。
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("IndexFormat", EditorStyles.label);
-                GUILayout.FlexibleSpace(); //填充左侧剩余空间，确保右边的内容能左对齐
-                setIndexFormat = (SetIndexFormat)EditorGUILayout.EnumPopup(setIndexFormat);
-                GUILayout.EndHorizontal();
-
-                //绘制Normal的选择项
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("Normals", EditorStyles.label);
-                GUILayout.FlexibleSpace(); //填充左侧剩余空间，确保右边的内容能左对齐
-                setNormals = (SetNormal)EditorGUILayout.EnumPopup(setNormals);
-                GUILayout.EndHorizontal();
-
-                //绘制Tangents的选择项
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("Tangents", EditorStyles.label);
-                GUILayout.FlexibleSpace(); //填充左侧剩余空间，确保右边的内容能左对齐
-                setTangents = (SetTangent)EditorGUILayout.EnumPopup(setTangents);
-                GUILayout.EndHorizontal();
-
-                isSwapUVs = GUILayout.Toggle(isSwapUVs, "SwapUVs:(交换UV)");
-                isGenerateLightmapUVs = GUILayout.Toggle(isGenerateLightmapUVs, "GenerateLightmapUVs:(生成光照题图)");
-
-                GUILayout.Space(10);
+                sliderSmoothingAngle = ModelPropertySettingsGUI.LabeledSlider(sliderSmoothingAngle , "Smoothing Angle" , 0.0f,180.0f);
+                setTangents = ModelPropertySettingsGUI.EnumPopup(setTangents , "Tangents");
+                isSwapUVs = ModelPropertySettingsGUI.LabeledToggle(isSwapUVs , "Swap UVs");
+                isGenerateLightmapUVs = ModelPropertySettingsGUI.LabeledToggle(isGenerateLightmapUVs , "Generate Lightmap UVs");
+                isStrictVertexDataChecks = ModelPropertySettingsGUI.LabeledToggle(isStrictVertexDataChecks , "StrictVertex Data Checks");
+                ModelPropertySettingsGUI.EndGroup();
             }
 
             //绘制GUI按钮，如果点击执行条件里面的内容
@@ -238,7 +239,6 @@ namespace yuxuetian
                  AddModelData();
                  SettingAnimationProperty();
              }
-
             GUILayout.Space(20);
 
             //-----------------------------------------------------Material-----------------------------------------------------------------------//
@@ -249,14 +249,12 @@ namespace yuxuetian
                 isMaterial = GUILayout.Toggle(isMaterial, "MaterialCreationMode");
             }
 
-
             //绘制GUI按钮，如果点击执行条件里面的内容
             if (GUILayout.Button("执行Material属性设置"))
             {
                 AddModelData();
                 SettingMaterialProperty();
             }
-
             GUILayout.Space(20);
 
             //-----------------------------------------------------Total-----------------------------------------------------------------------//
@@ -312,7 +310,7 @@ namespace yuxuetian
         {
             models.Clear();
             modelStrs.Clear();
-            modelImoprters.Clear();
+            modelImporters.Clear();
             
             //定义一个局部的数组，将选择的所有的模型添加到这个数组
             Object[] selectedModelData = GetSelectedModelObjs();
@@ -334,7 +332,7 @@ namespace yuxuetian
                     ModelImporter importer = ModelImporter.GetAtPath(path) as ModelImporter;
                     if (importer != null)
                     {
-                        modelImoprters.Add(importer);
+                        modelImporters.Add(importer);
                     }
                 }
             }
@@ -344,180 +342,247 @@ namespace yuxuetian
         private void SettingModelProperty()
         {
             //循环遍历存储在模型列表中的所有元素
-            for (int i = 0; i < modelImoprters.Count; i++)
+            for (int i = 0; i < modelImporters.Count; i++)
             {
                 ModelImporter importer = ModelImporter.GetAtPath(modelStrs[i]) as ModelImporter;
+                #region Scene
                 if (isBakeAxisConversion == true)
                 {
-                    modelImoprters[i].bakeAxisConversion = true;
+                    modelImporters[i].bakeAxisConversion = true;
                 }
                 else
                 {
-                    modelImoprters[i].bakeAxisConversion = false;
+                    modelImporters[i].bakeAxisConversion = false;
                 }
 
                 if (isImportBlendShapes == true)
                 {
-                    modelImoprters[i].importBlendShapes = true;
+                    modelImporters[i].importBlendShapes = true;
                 }
                 else
                 {
-                    modelImoprters[i].importBlendShapes = false;
+                    modelImporters[i].importBlendShapes = false;
                 }
                 
-                modelImoprters[i].importBlendShapeDeformPercent = false;
-                modelImoprters[i].importVisibility = false;
-                modelImoprters[i].preserveHierarchy = false;
-                modelImoprters[i].sortHierarchyByName = false;
+                modelImporters[i].importBlendShapeDeformPercent = false;
+                modelImporters[i].importVisibility = false;
                 //设置模型是否导入相机
                 if (isImportCameras == true)
                 {
-                    modelImoprters[i].importCameras = true;
+                    modelImporters[i].importCameras = true;
                 }
                 else
                 {
-                    modelImoprters[i].importCameras = false;
+                    modelImporters[i].importCameras = false;
                 }
 
                 //设置模型是否导入灯光
                 if (isImportLight == true)
                 {
-                    modelImoprters[i].importLights = true;
+                    modelImporters[i].importLights = true;
                 }
                 else
                 {
-                    modelImoprters[i].importLights = false;
+                    modelImporters[i].importLights = false;
                 }
+                
+                modelImporters[i].preserveHierarchy = false;
+                modelImporters[i].sortHierarchyByName = false;
+                #endregion
 
+                #region Meshes
                 if (meshCompression == MeshCompression.Off)
                 {
-                    modelImoprters[i].meshCompression = ModelImporterMeshCompression.Off;
+                    modelImporters[i].meshCompression = ModelImporterMeshCompression.Off;
                 }
                 else if(meshCompression == MeshCompression.Low)
                 {
-                    modelImoprters[i].meshCompression = ModelImporterMeshCompression.Low;
+                    modelImporters[i].meshCompression = ModelImporterMeshCompression.Low;
                 }
                 else if(meshCompression == MeshCompression.Medium)
                 {
-                    modelImoprters[i].meshCompression = ModelImporterMeshCompression.Medium;
+                    modelImporters[i].meshCompression = ModelImporterMeshCompression.Medium;
                 }
                 else
                 {
-                    modelImoprters[i].meshCompression = ModelImporterMeshCompression.High;
+                    modelImporters[i].meshCompression = ModelImporterMeshCompression.High;
                 }
 
-                //设置模型的读写属性
                 if (isReadWrite == true)
                 {
-                    modelImoprters[i].isReadable = true;
+                    modelImporters[i].isReadable = true;
                 }
                 else
                 {
-                    modelImoprters[i].isReadable = false;
+                    modelImporters[i].isReadable = false;
+                }
+                
+                if (isOptimizeMesh == true)
+                {
+                    modelImporters[i].optimizeMeshPolygons = true;
+                    modelImporters[i].optimizeMeshVertices = true;
+                }
+                else
+                {
+                    modelImporters[i].optimizeMeshPolygons = false;
+                    modelImporters[i].optimizeMeshVertices = false;
                 }
 
-                //设置模型的碰撞属性
                 if (isGenerateColliders == true)
                 {
-                    modelImoprters[i].addCollider = true;
+                    modelImporters[i].addCollider = true;
                 }
                 else
                 {
-                    modelImoprters[i].addCollider = false;
+                    modelImporters[i].addCollider = false;
+                }
+                #endregion
+
+                #region Geometry
+                if (isKeepQuads == true)
+                {
+                    modelImporters[i].keepQuads = true;
+                }
+                else
+                {
+                    modelImporters[i].keepQuads = false;
                 }
 
+                if (isWeldVertices == true)
+
+                {
+                    modelImporters[i].weldVertices = true;
+                }
+                else
+                {
+                    modelImporters[i].weldVertices = false;                    
+                }
+                
                 if (setIndexFormat == SetIndexFormat.Atuo)
                 {
-                    modelImoprters[i].indexFormat = ModelImporterIndexFormat.Auto;
+                    modelImporters[i].indexFormat = ModelImporterIndexFormat.Auto;
                 }
                 else if (setIndexFormat == SetIndexFormat.UInt16)
                 {
-                    modelImoprters[i].indexFormat = ModelImporterIndexFormat.UInt16;
+                    modelImporters[i].indexFormat = ModelImporterIndexFormat.UInt16;
                 }
                 else
                 {
-                    modelImoprters[i].indexFormat = ModelImporterIndexFormat.UInt32;
+                    modelImporters[i].indexFormat = ModelImporterIndexFormat.UInt32;
                 }
 
-                //设置网格属性优化
-                if (isOptimizeMesh == true)
+                //TODO
+                if (isLegacyBlendShapeNormals)
                 {
-                    modelImoprters[i].optimizeMeshPolygons = true;
-                    modelImoprters[i].optimizeMeshVertices = true;
-                    modelImoprters[i].optimizeMeshVertices = true;
+                    //modelImporters[i].legacyBlendShapeNormals = true;
                 }
                 else
                 {
-                    modelImoprters[i].optimizeMeshPolygons = false;
-                    modelImoprters[i].optimizeMeshVertices = false;
-                    modelImoprters[i].optimizeMeshVertices = false;
+                    if (setSmoothnessSource == SetSmoothnessSource.PreferSmoothingGroups)
+                    {
+                        modelImporters[i].normalSmoothingSource = ModelImporterNormalSmoothingSource.PreferSmoothingGroups;
+                    }
+                    else if (setSmoothnessSource == SetSmoothnessSource.FromSmoothingGroups)
+                    {
+                        modelImporters[i].normalSmoothingSource = ModelImporterNormalSmoothingSource.FromSmoothingGroups;
+                    }
+                    else if (setSmoothnessSource == SetSmoothnessSource.FromAngle)
+                    {
+                        modelImporters[i].normalSmoothingSource = ModelImporterNormalSmoothingSource.FromAngle;
+                    }
+                    else
+                    {
+                        modelImporters[i].normalSmoothingSource = ModelImporterNormalSmoothingSource.None;
+                    }
                 }
 
-                //设置法线的导入方式
                 if (setNormals == SetNormal.Import)
                 {
-                    modelImoprters[i].importNormals = ModelImporterNormals.Import;
+                    modelImporters[i].importNormals = ModelImporterNormals.Import;
+                }
+                else if (setNormals == SetNormal.Calculate)
+                {
+                    modelImporters[i].importNormals = ModelImporterNormals.Calculate;
+                }
+                else
+                {
+                    modelImporters[i].importNormals = ModelImporterNormals.None;
                 }
 
-                if (setNormals == SetNormal.Calculate)
+                //TODO
+                if (setNormalMode == SetNormalsMode.Unweighted)
                 {
-                    modelImoprters[i].importNormals = ModelImporterNormals.Calculate;
                 }
-
-                if (setNormals == SetNormal.None)
+                else if(setNormalMode == SetNormalsMode.AreaWeighted)
                 {
-                    modelImoprters[i].importNormals = ModelImporterNormals.None;
+                    
+                }
+                else if (setNormalMode == SetNormalsMode.AngleWeighted)
+                {
+                    
+                }
+                else if(setNormalMode == SetNormalsMode.AreaAndAngleWeighted)
+                {
+                    
+                }
+                else
+                {
+                    
                 }
 
                 // //设置切线的导入方式
                 if (setTangents == SetTangent.Import)
                 {
-                    modelImoprters[i].importTangents = ModelImporterTangents.Import;
+                    modelImporters[i].importTangents = ModelImporterTangents.Import;
                 }
 
                 if (setTangents == SetTangent.CalculateLegacy)
                 {
-                    modelImoprters[i].importTangents = ModelImporterTangents.CalculateLegacy;
+                    modelImporters[i].importTangents = ModelImporterTangents.CalculateLegacy;
                 }
 
                 if (setTangents == SetTangent.CalculateLegacyWithSplitTangents)
                 {
-                    modelImoprters[i].importTangents = ModelImporterTangents.CalculateLegacyWithSplitTangents;
+                    modelImporters[i].importTangents = ModelImporterTangents.CalculateLegacyWithSplitTangents;
                 }
 
                 if (setTangents == SetTangent.CalculateMikktspace)
                 {
-                    modelImoprters[i].importTangents = ModelImporterTangents.CalculateMikk;
+                    modelImporters[i].importTangents = ModelImporterTangents.CalculateMikk;
                 }
 
                 if (setTangents == SetTangent.None)
                 {
-                    modelImoprters[i].importTangents = ModelImporterTangents.None;
+                    modelImporters[i].importTangents = ModelImporterTangents.None;
                 }
 
                 //设置第二套uv交换
                 if (isSwapUVs == true)
                 {
-                    modelImoprters[i].swapUVChannels = true;
+                    modelImporters[i].swapUVChannels = true;
                 }
                 else
                 {
-                    modelImoprters[i].swapUVChannels = false;
+                    modelImporters[i].swapUVChannels = false;
                 }
 
                 if (isGenerateLightmapUVs == true)
                 {
-                    modelImoprters[i].generateSecondaryUV = true;
+                    modelImporters[i].generateSecondaryUV = true;
                 }
                 else
                 {
-                    modelImoprters[i].generateSecondaryUV = false;
+                    modelImporters[i].generateSecondaryUV = false;
                 }
+                
+
+                #endregion
+                
 
                 EditorUtility.SetDirty(importer);
                 AssetDatabase.ImportAsset(modelStrs[i]);
                 //执行完成后对model进行保存，通常使用SaveAndReimport来应用更改
-                // modelImoprters[i].SaveAndReimport();
+                // modelImporters[i].SaveAndReimport();
             }
             AssetDatabase.Refresh();
         }
@@ -525,7 +590,7 @@ namespace yuxuetian
         //Rig属性设置
         private void SettingRigProperty()
         {
-            for (int i = 0; i < modelImoprters.Count; i++)
+            for (int i = 0; i < modelImporters.Count; i++)
             {
                 //判断模型是否需要骨骼
                 if (isRig == true)
@@ -533,30 +598,30 @@ namespace yuxuetian
                     //判断需要哪一种骨架,不同的骨架下的属性不完全相同
                     if (setAnimationType == SetAnimationType.None)
                     {
-                        modelImoprters[i].animationType = ModelImporterAnimationType.None;
+                        modelImporters[i].animationType = ModelImporterAnimationType.None;
                     }
                     else if (setAnimationType == SetAnimationType.Legacy)
                     {
-                        modelImoprters[i].animationType = ModelImporterAnimationType.Legacy;
+                        modelImporters[i].animationType = ModelImporterAnimationType.Legacy;
                         //TODO
                         //后续有需要再添加对应骨架下的属性设置
                     }
                     else if (setAnimationType == SetAnimationType.Generic)
                     {
-                        modelImoprters[i].animationType = ModelImporterAnimationType.Generic;
+                        modelImporters[i].animationType = ModelImporterAnimationType.Generic;
                         //TODO
                     }
                     else
                     {
                         //这里的设置当前存在问题（待完善）
-                        modelImoprters[i].animationType = ModelImporterAnimationType.Human;
+                        modelImporters[i].animationType = ModelImporterAnimationType.Human;
                         //TODO
                     }
 
                 }
                 else
                 {
-                    modelImoprters[i].animationType = ModelImporterAnimationType.None;
+                    modelImporters[i].animationType = ModelImporterAnimationType.None;
                 }
 
                 AssetDatabase.ImportAsset(modelStrs[i]);
@@ -567,22 +632,22 @@ namespace yuxuetian
         //设置Animation动画属性
         private void SettingAnimationProperty()
         {
-            for (int i = 0; i < modelImoprters.Count; i++)
+            for (int i = 0; i < modelImporters.Count; i++)
             {
                 if (hasAnimation == true)
                 {
                     if (importAnimation == true)
                     {
-                        modelImoprters[i].importAnimation = true;
+                        modelImporters[i].importAnimation = true;
                     }
                     else
                     {
-                        modelImoprters[i].importAnimation = false;
+                        modelImporters[i].importAnimation = false;
                     }
                 }
                 else
                 {
-                    modelImoprters[i].importAnimation = false;
+                    modelImporters[i].importAnimation = false;
                 }
 
                 AssetDatabase.ImportAsset(modelStrs[i]);
@@ -594,17 +659,17 @@ namespace yuxuetian
         //设置Material材质属性
         private void SettingMaterialProperty()
         {
-            for (int i = 0; i < modelImoprters.Count; i++)
+            for (int i = 0; i < modelImporters.Count; i++)
             {
                 //如果勾选了导入材质，直接使用引擎的stander.shader，否则就不要导入材质（这里完全不考虑使用Import via MaterialDescription，它会导入你所使用DCC软件的材质shader)
                 if (isMaterial)
                 {
-                    modelImoprters[i].materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
-                    modelImoprters[i].materialLocation = ModelImporterMaterialLocation.InPrefab;
+                    modelImporters[i].materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
+                    modelImporters[i].materialLocation = ModelImporterMaterialLocation.InPrefab;
                 }
                 else
                 {
-                    modelImoprters[i].materialImportMode = ModelImporterMaterialImportMode.None;
+                    modelImporters[i].materialImportMode = ModelImporterMaterialImportMode.None;
                 }
 
                 AssetDatabase.ImportAsset(modelStrs[i]);

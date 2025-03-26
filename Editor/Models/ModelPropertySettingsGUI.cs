@@ -6,20 +6,7 @@ using System;
 
 public class ModelPropertySettingsGUI 
 {
-    public const float DEFAULT_LABEL_WIDTH = 180.0f;
-    public const float DEFAULT_TOGGLE_INDENT = 15f; //缩进
-    
-    /// <summary>
-    /// 绘制带缩进的Toggle
-    /// </summary>
-    public static bool Toggle(bool value, string label, float indent = DEFAULT_TOGGLE_INDENT, string suffix = "")
-    {
-        EditorGUILayout.BeginHorizontal();
-        GUILayout.Space(indent);
-        value = EditorGUILayout.Toggle(label + suffix, value);
-        EditorGUILayout.EndHorizontal();
-        return value;
-    }
+    public const float DEFAULT_LABEL_WIDTH = 200.0f;
     
     /// <summary>
     /// 绘制带固定宽度标签的右对齐Toggle
@@ -28,7 +15,6 @@ public class ModelPropertySettingsGUI
     {
         EditorGUILayout.BeginHorizontal();
         EditorGUILayout.LabelField(label, GUILayout.Width(labelWidth));
-        GUILayout.FlexibleSpace();
         value = EditorGUILayout.Toggle(value);
         EditorGUILayout.EndHorizontal();
         return value;
@@ -41,8 +27,19 @@ public class ModelPropertySettingsGUI
     {
         EditorGUILayout.BeginHorizontal();
         EditorGUILayout.LabelField(label, GUILayout.Width(labelWidth));
-        GUILayout.FlexibleSpace();
         value = (T)EditorGUILayout.EnumPopup(value);
+        EditorGUILayout.EndHorizontal();
+        return value;
+    }
+    
+    /// <summary>
+    /// 带标签的滑动条（float版本）
+    /// </summary>
+    public static float LabeledSlider(float value, string label, float leftValue, float rightValue, float labelWidth = DEFAULT_LABEL_WIDTH)
+    {
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.LabelField(label, GUILayout.Width(labelWidth));
+        value = EditorGUILayout.Slider(value, leftValue, rightValue);
         EditorGUILayout.EndHorizontal();
         return value;
     }
