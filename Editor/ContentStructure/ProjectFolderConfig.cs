@@ -19,17 +19,23 @@ public static class ProjectFolderConfig
     public static readonly Dictionary<string, string[]> SecondLevelFolders = 
         new Dictionary<string, string[]>
         {
-            { "ArtAssets", new  [] { "Animations", "Animator" , "Audio" , "Character", "Scene", "Effect" , "UI" , "Fonts" ,"Weapon" } },
+            { "ArtAssets", new  [] { "Animations", "Animator" , "Audio" , "Character", "Scene", "Effect" , "UI" , "Fonts" ,"Weapon" , "Interactive"} },
             { "Presets", new [] { "Character" , "Scene"} },
             { "Scripts", new[] { "Shaders" , "Commons" } },
             { "Maps", new[] { "DesignerLevels" , "ArtLevels" , "ProgramLevels" } }
         };
     
+    /// <summary>
     //Third-level folders
+    /// </summary>
     public static readonly Dictionary<string, string[]> ThirdLevelFolders =
         new Dictionary<string, string[]>
         {
-            { "ArtAssets/Scene", new[] { "Materials", "Models", "Prefabs", "Textures" } },
-            { "Presets/Scene" , new[] { "Models" , "Textures"}}
+            { "ArtAssets/Audio",new []{"Music", "Sounds"} },
+            { "ArtAssets/Scene", new[]{ "Materials", "Models", "Prefabs", "Textures" } },
+            {"ArtAssets/UI",new []{"Background","icon"}},
+            { "ArtAssets/Interactive", new[]{"TriggerObjects", "Prop"}},
+            { "Presets/Scene", new[] { "Models" , "Textures"}},
+            { "Scripts/Shaders", new []{"Character","Scene" , "Effects" , "UI" , "Postprocess"}}
         };
 }
