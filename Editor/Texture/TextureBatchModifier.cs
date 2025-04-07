@@ -14,37 +14,34 @@ namespace yuxuetian
     {
         private Vector2 scrollPosition;
         
-
-        // Basic Settings
-        private TextureImporterType customtextureType = TextureImporterType.Default;
-        private TextureImporterShape customTextureShape = TextureImporterShape.Texture2D;
-        private bool sRGB = true;
-        private TextureImporterAlphaSource customAlphaSource = TextureImporterAlphaSource.FromInput;
-        private bool customAlphaIsTransparency = false; 
+        private TextureImporterAlphaSource _AlphaSource = TextureImporterAlphaSource.FromInput;
+        private bool _AlphaIsTransparency = false; 
 
         // Advanced Settings
-        private bool isAdvanced = false;
-        private bool customrReadWrite = false;
-        private bool customGenerateMipmaps = false;
-        private bool customMipStreaming = false;
-        private int  customPriority = 0;
-        private TextureImporterMipFilter customMipmapFiltering = TextureImporterMipFilter.BoxFilter;  
-        private bool customPreserveCoverage = false;
-        private bool customReplicateBorder = false;
-        private bool customFadeoutToGray = false;
+        private bool _isAdvanced = false;
+        private bool _readWrite = false;
+        private bool _virtualTextureOnly = false;
+        private bool _generateMipmaps = false;
+        private bool _mipStreaming = false;
+        private int  _priority = 0;
+        private TextureImporterMipFilter _mipmapFiltering = TextureImporterMipFilter.BoxFilter;  
+        private bool _preserveCoverage = false;
+        private bool _replicateBorder = false;
+        private bool _fadeoutToGray = false;
+        private bool _ignorePNGGamma = false;
         
-        private TextureWrapMode wrapMode = TextureWrapMode.Repeat;
-        private FilterMode filterMode = FilterMode.Bilinear;
-        private int anisoLevel = 1;
+        private TextureWrapMode _wrapMode = TextureWrapMode.Repeat;
+        private FilterMode _filterMode = FilterMode.Bilinear;
+        private int _anisoLevel = 1;
 
-        private int maxSize = 1024;
+        private int _maxSize = 1024;
         private int[] powerOfTwoSizes = { 32, 64, 128, 256, 512, 1024, 2048, 4096 };
         private int selectedIndex = 1;
-        private TextureResizeAlgorithm resizeAlgorithm = TextureResizeAlgorithm.Mitchell;
-        private TextureImporterFormat format = TextureImporterFormat.Automatic;
-        private TextureImporterCompression compression = TextureImporterCompression.Compressed;
+        private TextureResizeAlgorithm _resizeAlgorithm = TextureResizeAlgorithm.Mitchell;
+        private TextureImporterFormat _format = TextureImporterFormat.Automatic;
+        private TextureImporterCompression _compression = TextureImporterCompression.Compressed;
 
-        [MenuItem("Tools/Texture Batch Modifier")]
+        [MenuItem("ArtTools/Texture/Texture Batch Modifier" , false, 201)]
         public static void ShowWindow()
         {
             GetWindow<TextureBatchModifier>("Texture Batch Modifier");
@@ -53,171 +50,118 @@ namespace yuxuetian
         private void OnGUI()
         {
             scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
-
-            //纹理基础部分设置
-            customtextureType = (TextureImporterType)EditorGUILayout.EnumPopup("Texture Type", customtextureType);
-            customTextureShape = (TextureImporterShape)EditorGUILayout.EnumPopup("Texture Shape", customTextureShape);
-            sRGB = EditorGUILayout.Toggle("SRGB", sRGB);
-            customAlphaSource = (TextureImporterAlphaSource)EditorGUILayout.EnumPopup("Alpha Source" , customAlphaSource);
-            // 使用DisableScope控制Alpha Is Transparency的可编辑状态
-            using (new EditorGUI.DisabledScope(customAlphaSource == TextureImporterAlphaSource.None))
+           
+            _AlphaSource = (TextureImporterAlphaSource)EditorGUILayout.EnumPopup("Alpha Source" , _AlphaSource);
+            // 使用DisableScope控制Alpha Is Transparency的可编辑状态，当Alpha来源为None时，此选项会变灰且不可编辑
+            using (new EditorGUI.DisabledScope(_AlphaSource == TextureImporterAlphaSource.None))
             {
-                // 当Alpha来源为None时，此选项会变灰且不可编辑
-                customAlphaIsTransparency = EditorGUILayout.Toggle("Alpha作为透明度", customAlphaIsTransparency);
+                _AlphaIsTransparency = EditorGUILayout.Toggle("Alpha is Transparency", _AlphaIsTransparency);
             }
-            //纹理高级部分设置
-            isAdvanced = EditorGUILayout.Foldout(isAdvanced, "Advanced");
-            if (isAdvanced)
+            GUILayout.Space(10);
+            
+            _isAdvanced = EditorGUILayout.Foldout(_isAdvanced, "Advanced");
+            if (_isAdvanced)
             {
                 EditorGUI.indentLevel++;
-                customrReadWrite = EditorGUILayout.Toggle("Read/Write", customrReadWrite);
-                customGenerateMipmaps = EditorGUILayout.Toggle("Generate Mipmaps", customGenerateMipmaps);
-                if (customGenerateMipmaps)
+                _readWrite = EditorGUILayout.Toggle("Read/Write", _readWrite);
+                _virtualTextureOnly = EditorGUILayout.Toggle("Virtual Texture Only", _virtualTextureOnly);
+                _generateMipmaps = EditorGUILayout.Toggle("Generate Mipmaps", _generateMipmaps);
+                if (_generateMipmaps)
                 {
                     EditorGUI.indentLevel++;
-                    customMipStreaming = EditorGUILayout.Toggle("Mip Streaming", customMipStreaming);
-                    if (customMipStreaming)
+                    _mipStreaming = EditorGUILayout.Toggle("Mip Streaming", _mipStreaming);
+                    if (_mipStreaming)
                     {
                         EditorGUI.indentLevel++;
-                        customPriority = EditorGUILayout.IntField("Priority", customPriority);
+                        _priority = EditorGUILayout.IntField("Priority", _priority);
                         EditorGUI.indentLevel--;
                     }
-                    customMipmapFiltering = (TextureImporterMipFilter)EditorGUILayout.EnumPopup("Mip Filtering", customMipmapFiltering);
-                    customPreserveCoverage = EditorGUILayout.Toggle("Preserve Coverage", customPreserveCoverage);
-                    customReplicateBorder = EditorGUILayout.Toggle("Replicate Border", customReplicateBorder);
-                    customFadeoutToGray = EditorGUILayout.Toggle("Fadeout to Gray", customFadeoutToGray);
+                    _mipmapFiltering = (TextureImporterMipFilter)EditorGUILayout.EnumPopup("Mip Filtering", _mipmapFiltering);
+                    _preserveCoverage = EditorGUILayout.Toggle("Preserve Coverage", _preserveCoverage);
+                    _replicateBorder = EditorGUILayout.Toggle("Replicate Border", _replicateBorder);
+                    _fadeoutToGray = EditorGUILayout.Toggle("Fadeout to Gray", _fadeoutToGray);
                     EditorGUI.indentLevel--;
                 }
-                wrapMode = (TextureWrapMode)EditorGUILayout.EnumPopup("Wrap Mode", wrapMode);
-                filterMode = (FilterMode)EditorGUILayout.EnumPopup("Filter", filterMode);
-                anisoLevel = EditorGUILayout.IntSlider("Aniso Level" , anisoLevel, 1, 16);
+                _ignorePNGGamma = EditorGUILayout.Toggle("Ignore PNG Gamma", _ignorePNGGamma);
                 EditorGUI.indentLevel--;
+                GUILayout.Space(10);
+                
+                _wrapMode = (TextureWrapMode)EditorGUILayout.EnumPopup("Wrap Mode", _wrapMode);
+                _filterMode = (FilterMode)EditorGUILayout.EnumPopup("Filter", _filterMode);
+                using (new EditorGUI.DisabledScope(_generateMipmaps == false))
+                {
+                    _anisoLevel = EditorGUILayout.IntSlider("Aniso Level" , _anisoLevel, 1, 16);
+                }
             }
             
-            //平台部分的设置
+            //平台设置的GUI
             TextureGUIStyleHelper.BeginCustomBox("");
             selectedIndex = EditorGUILayout.Popup("Max Size", selectedIndex, Array.ConvertAll(powerOfTwoSizes, x => x.ToString()));
-            maxSize = powerOfTwoSizes[selectedIndex];
-            resizeAlgorithm = (TextureResizeAlgorithm)EditorGUILayout.EnumPopup("Resize Algorithm", resizeAlgorithm);
-            format = (TextureImporterFormat)EditorGUILayout.EnumPopup("Texture Format", format);
-            compression = (TextureImporterCompression)EditorGUILayout.EnumPopup("Texture Compression", compression);
+            _maxSize = powerOfTwoSizes[selectedIndex];
+            _resizeAlgorithm = (TextureResizeAlgorithm)EditorGUILayout.EnumPopup("Resize Algorithm", _resizeAlgorithm);
+            _format = (TextureImporterFormat)EditorGUILayout.EnumPopup("Format", _format);
+            _compression = (TextureImporterCompression)EditorGUILayout.EnumPopup("Compression", _compression);
             TextureGUIStyleHelper.EndCustomBox();
+            
             EditorGUILayout.EndScrollView();
 
-            if (GUILayout.Button("Apply Platform Settings"))
+            if (GUILayout.Button("Apply Settings"))
             {
-                GetSelectedTexturePaths();
-                // ApplyPlatformSettings();
+                ApplyDefaultSettings();
             }
-
-            if (GUILayout.Button("Apply Other Settings"))
-            {
-                ApplyOtherSettings();
-            }
+            GUILayout.Space(10);
         }
         
-        private void ApplyPlatformSettings()
+        private void ApplyDefaultSettings()
         {
             string[] paths = GetSelectedTexturePaths();
             if (paths == null || paths.Length == 0) return;
-
-            foreach (string path in paths)
-            {
-                TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
-                if (importer == null) continue;
-
-                // Apply platform settings
-                TextureImporterPlatformSettings platformSettings = importer.GetDefaultPlatformTextureSettings();
-                platformSettings.overridden = true;
-                platformSettings.maxTextureSize = maxSize;
-                platformSettings.resizeAlgorithm = resizeAlgorithm;
-                platformSettings.format = format;
-                platformSettings.textureCompression = compression;
             
-                importer.SetPlatformTextureSettings(platformSettings);
-                importer.SaveAndReimport();
-            }
-
-            AssetDatabase.Refresh();
-            Debug.Log($"Applied platform settings to {paths.Length} textures.");
-        }
-        
-        private void ApplyOtherSettings()
-        {
-            string[] paths = GetSelectedTexturePaths();
-            if (paths == null || paths.Length == 0) return;
-
+            TextureRuleProcessor.InitializeBasicSettings(_AlphaSource , _AlphaIsTransparency , _readWrite , _virtualTextureOnly,_generateMipmaps,_ignorePNGGamma , _wrapMode, _filterMode, _anisoLevel);
+            TextureRuleProcessor.InitializePlatformSettings(_maxSize , _resizeAlgorithm ,_format , _compression);
+            
             foreach (string path in paths)
             {
                 TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+                TextureImporterPlatformSettings platformSettings = importer.GetDefaultPlatformTextureSettings();
                 if (importer == null) continue;
 
                 string fileName = Path.GetFileNameWithoutExtension(path);
+                
+                TextureRuleProcessor.SetCharacterTextureSettings(importer, fileName , platformSettings);
+                TextureRuleProcessor.SetSceneTextureSettings(importer, fileName , platformSettings);
+                TextureRuleProcessor.SetEffectTextureSettings(importer, fileName , platformSettings);
+                TextureRuleProcessor.SetUITextureSettings(importer, fileName , platformSettings);
 
-                // Apply texture type rules first
-                TextureRuleProcessor.ProcessTextureRules(importer, fileName, customtextureType, customTextureShape, sRGB);
-
-                // Apply other settings
-                importer.alphaSource = customAlphaSource;
-                importer.alphaIsTransparency = customAlphaIsTransparency;
-                importer.isReadable = customrReadWrite;
-                importer.mipmapEnabled = customGenerateMipmaps;
-            
-                if (customGenerateMipmaps)
-                {
-                    importer.streamingMipmaps = customMipStreaming;
-                    importer.streamingMipmapsPriority = customPriority;
-                    importer.mipmapFilter = customMipmapFiltering;
-                    importer.mipMapsPreserveCoverage = customPreserveCoverage;
-                    importer.borderMipmap = customReplicateBorder;
-                    importer.fadeout = customFadeoutToGray;
-                }
-
-                importer.wrapMode = wrapMode;
-                importer.filterMode = filterMode;
-                importer.anisoLevel = anisoLevel;
-
+                EditorUtility.SetDirty(importer);
                 importer.SaveAndReimport();
             }
-
             AssetDatabase.Refresh();
-            Debug.Log($"Applied other settings to {paths.Length} textures.");
         }
         
         private string[] GetSelectedTexturePaths()
         {
-            // Get selected objects (could be files or folders)
             Object[] selectedObjects = Selection.GetFiltered(typeof(Object), SelectionMode.Assets);
-            if (selectedObjects.Length == 0)
-            {
-                Debug.LogWarning("No textures or folders selected.");
-                return null;
-            }
+            if (selectedObjects.Length == 0) return null;
 
-            // Collect all texture paths
-            var texturePaths = new System.Collections.Generic.List<string>();
+            var texturePaths = new List<string>();
 
             foreach (Object obj in selectedObjects)
             {
                 string path = AssetDatabase.GetAssetPath(obj);
                 if (string.IsNullOrEmpty(path)) continue;
 
-                // If it's a directory, find all textures recursively
                 if (Directory.Exists(path))
                 {
-                    string[] files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories)
-                        .Where(file => file.EndsWith(".png") || file.EndsWith(".jpg") || file.EndsWith(".jpeg") || file.EndsWith(".tga") || file.EndsWith(".bmp"))
-                        .ToArray();
-                    texturePaths.AddRange(files);
-                    Debug.Log($"Selected texture path: {path}" + obj.name);
+                    texturePaths.AddRange(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories).Where(IsTextureFile));
                 }
-                // If it's a texture file, add it directly
                 else if (IsTextureFile(path))
                 {
                     texturePaths.Add(path);
                 }
             }
 
+            //如果选择的路径下没有贴图文件，打印提示。
             if (texturePaths.Count == 0)
             {
                 Debug.LogWarning("No valid texture files found in selection.");
@@ -227,10 +171,17 @@ namespace yuxuetian
             return texturePaths.ToArray();
         }
         
+        /// <summary>
+        /// 检查给定路径的文件是否为支持的纹理格式（.png 或 .tga）
+        /// 该方法不区分扩展名大小写，会同等处理.PNG/.png/.Png等所有大小写变体
+        /// </summary>
         private bool IsTextureFile(string path)
         {
-            string ext = Path.GetExtension(path).ToLower();
-            return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".tga" || ext == ".bmp";
+            // 获取文件扩展名（包含点符号，如".png"）
+            string ext = Path.GetExtension(path);
+            // 检查扩展名是否为.png或.tga（不区分大小写）
+            return ext.Equals(".png", StringComparison.OrdinalIgnoreCase) || 
+                   ext.Equals(".tga", StringComparison.OrdinalIgnoreCase);
         }
     }
 }
