@@ -26,6 +26,7 @@ namespace yuxuetian
         private int  _priority = 0;
         private TextureImporterMipFilter _mipmapFiltering = TextureImporterMipFilter.BoxFilter;  
         private bool _preserveCoverage = false;
+        private float _alphaCutoff = 0.5f;
         private bool _replicateBorder = false;
         private bool _fadeoutToGray = false;
         private bool _ignorePNGGamma = false;
@@ -78,6 +79,12 @@ namespace yuxuetian
                     }
                     _mipmapFiltering = (TextureImporterMipFilter)EditorGUILayout.EnumPopup("Mip Filtering", _mipmapFiltering);
                     _preserveCoverage = EditorGUILayout.Toggle("Preserve Coverage", _preserveCoverage);
+                    if (_preserveCoverage)
+                    {
+                        EditorGUI.indentLevel++;
+                        _alphaCutoff = EditorGUILayout.FloatField("Alpha Cutoff", _alphaCutoff);
+                        EditorGUI.indentLevel--;
+                    }
                     _replicateBorder = EditorGUILayout.Toggle("Replicate Border", _replicateBorder);
                     _fadeoutToGray = EditorGUILayout.Toggle("Fadeout to Gray", _fadeoutToGray);
                     EditorGUI.indentLevel--;
@@ -92,6 +99,7 @@ namespace yuxuetian
                 {
                     _anisoLevel = EditorGUILayout.IntSlider("Aniso Level" , _anisoLevel, 1, 16);
                 }
+                GUILayout.Space(10);
             }
             
             //平台设置的GUI
@@ -117,7 +125,9 @@ namespace yuxuetian
             string[] paths = GetSelectedTexturePaths();
             if (paths == null || paths.Length == 0) return;
             
-            TextureRuleProcessor.InitializeBasicSettings(_AlphaSource , _AlphaIsTransparency , _readWrite , _virtualTextureOnly,_generateMipmaps,_ignorePNGGamma , _wrapMode, _filterMode, _anisoLevel);
+            TextureRuleProcessor.InitializeBasicSettings( _AlphaSource, _AlphaIsTransparency, _readWrite, _virtualTextureOnly, 
+                                                          _generateMipmaps, _mipStreaming, _priority , _mipmapFiltering, _preserveCoverage, _replicateBorder, _fadeoutToGray,
+                                                          _alphaCutoff, _ignorePNGGamma, _wrapMode, _filterMode, _anisoLevel);
             TextureRuleProcessor.InitializePlatformSettings(_maxSize , _resizeAlgorithm ,_format , _compression);
             
             foreach (string path in paths)

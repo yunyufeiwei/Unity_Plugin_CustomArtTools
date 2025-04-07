@@ -12,6 +12,13 @@ namespace yuxuetian
         private static bool customIsReadWrite = false;
         private static bool customVirtualTextureOnly = false;
         private static bool customGenerateMipmaps = false;
+        private static bool customMipStreaming = false;
+        private static int customProiority = 0;
+        private static TextureImporterMipFilter customMipFilter;
+        private static bool customPreserveCoverage = false;
+        private static float customAlphaCutoff = 0.5f;
+        private static bool customReplicateBorder = false;
+        private static bool customFadeoutToGray = false;
         private static bool customIgnorePNGGamma = false;
         
         private static TextureWrapMode customWrapMode = TextureWrapMode.Repeat;
@@ -24,8 +31,9 @@ namespace yuxuetian
         private static TextureImporterCompression customCompression = TextureImporterCompression.Compressed;
 
         //初始化基础属性设置,将GUI上设置的属性传入过来
-        public static void InitializeBasicSettings(TextureImporterAlphaSource alphaSource,bool alphaIsTransparency,bool isReadable , bool virtualTextureOnly , bool generateMipmaps, bool ignorePNGGamma,
-            TextureWrapMode wrapMode , FilterMode  filterMode, int anisoLevel)
+        public static void InitializeBasicSettings( TextureImporterAlphaSource alphaSource, bool alphaIsTransparency, bool isReadable, bool virtualTextureOnly , 
+                                                    bool generateMipmaps, bool mipStreaming, int proiority , TextureImporterMipFilter mipFilter, bool preserveCoverage , bool replicateBorder , bool fadeoutToGray,
+                                                    float alphaCutoff, bool ignorePNGGamma, TextureWrapMode wrapMode , FilterMode  filterMode, int anisoLevel)
         {
             customAlphaSource = alphaSource;
             customAlphaIsTransparency = alphaIsTransparency;
@@ -33,6 +41,13 @@ namespace yuxuetian
             customIsReadWrite = isReadable;
             customVirtualTextureOnly = virtualTextureOnly;
             customGenerateMipmaps = generateMipmaps;
+            customMipStreaming = mipStreaming;
+            customProiority = proiority;
+            customMipFilter = mipFilter;
+            customPreserveCoverage = preserveCoverage;
+            customAlphaCutoff = alphaCutoff;
+            customReplicateBorder = replicateBorder;
+            customFadeoutToGray = fadeoutToGray;
             customIgnorePNGGamma = ignorePNGGamma;
             
             customWrapMode = wrapMode;
@@ -43,15 +58,14 @@ namespace yuxuetian
         //初始化平台属性设置
         public static void InitializePlatformSettings(int maxSize , TextureResizeAlgorithm resizeAlgorithm , TextureImporterFormat format , TextureImporterCompression compression)
         {
-            if (maxSize < customMaxSize)
-            {
-                customMaxSize = maxSize;
-            }
+            
+            customMaxSize = maxSize;
             customResizeAlgorithm = resizeAlgorithm;
             customFormat = format;
             customCompression = compression;
         }
 
+        //公用参数设置执行部分
         private static void ApplyCommonSettings(TextureImporter importer)
         {
             importer.alphaSource = customAlphaSource;
@@ -65,6 +79,16 @@ namespace yuxuetian
                 {
                     importer.vtOnly = customVirtualTextureOnly;
                 }
+                importer.streamingMipmaps = customMipStreaming;
+                importer.streamingMipmapsPriority = customProiority;
+                importer.mipmapFilter = customMipFilter;
+                importer.mipMapsPreserveCoverage = customPreserveCoverage;
+                if (importer.mipMapsPreserveCoverage == true)
+                {
+                    importer.alphaTestReferenceValue = customAlphaCutoff;
+                }
+                importer.borderMipmap = customReplicateBorder;
+                importer.fadeout  = customFadeoutToGray;
                 importer.anisoLevel = customAnisoLevel;
             }
             else
@@ -78,11 +102,15 @@ namespace yuxuetian
             importer.filterMode = customFilterMode;
         }
 
+        //平台参数设置部分
         private static void ApplyPlatformSettings(TextureImporter importer ,string path)
         {
             TextureImporterPlatformSettings platformSettings = importer.GetDefaultPlatformTextureSettings();
             
-            platformSettings.maxTextureSize = customMaxSize;
+            if (platformSettings.maxTextureSize > customMaxSize)
+            {
+                platformSettings.maxTextureSize = customMaxSize;
+            }
             platformSettings.resizeAlgorithm = customResizeAlgorithm;
             platformSettings.format = customFormat;
             platformSettings.textureCompression = customCompression;
@@ -217,23 +245,36 @@ namespace yuxuetian
 
         public static void SetUITextureSettings(TextureImporter importer, string fileName , TextureImporterPlatformSettings platformSettings)
         {
-            if (fileName.StartsWith("T_U_", StringComparison.OrdinalIgnoreCase))
+            if (fileName.StartsWith("T_UI_", StringComparison.OrdinalIgnoreCase))
             {
                 if (fileName.EndsWith("_B", StringComparison.OrdinalIgnoreCase))
                 {
                     importer.textureType = TextureImporterType.Sprite;
                     importer.textureShape = TextureImporterShape.Texture2D;
-                    importer.sRGBTexture = false;
+                    importer.sRGBTexture = true;
                 }
                 else if (fileName.EndsWith("_N", StringComparison.OrdinalIgnoreCase))
                 {
                     importer.textureType = TextureImporterType.NormalMap;
                     importer.textureShape = TextureImporterShape.Texture2D;
+                    importer.sRGBTexture = true;
+                }
+                else if (fileName.EndsWith("_M", StringComparison.OrdinalIgnoreCase) ||
+                         fileName.EndsWith("_Mask", StringComparison.OrdinalIgnoreCase) ||
+                         fileName.EndsWith("_MRA", StringComparison.OrdinalIgnoreCase))
+                {
+                    importer.textureType = TextureImporterType.Sprite;
+                    importer.textureShape = TextureImporterShape.Texture2D;
+                    importer.sRGBTexture = false;
                 }
                 importer.spriteImportMode = SpriteImportMode.Single;
             }
             ApplyCommonSettings(importer);
             ApplyPlatformSettings(importer , fileName);
+            
+            //对于UI纹理，先按照规则执行一遍上述设置，然后单独将前缀表示是UI的纹理额alpha进行额外的设置
+            importer.alphaIsTransparency = true;
+
         }
     }
 }
