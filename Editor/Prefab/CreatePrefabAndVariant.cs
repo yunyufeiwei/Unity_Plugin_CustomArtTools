@@ -35,7 +35,7 @@ namespace yuxuetian
 
         private Vector2 scroPos;
 
-        [MenuItem("ArtTools/Model/创建预制体以及变体(同时)",false,121)]
+        [MenuItem("ArtTools/Prefab/创建预制体以及变体(同时)",false,121)]
         private static void ShowWindow()
         {
             GetWindow<CreatePrefabsAndVariants>("Create Prefabs and Variants");

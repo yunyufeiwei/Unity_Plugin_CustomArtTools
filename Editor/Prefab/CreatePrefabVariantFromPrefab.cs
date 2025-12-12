@@ -20,7 +20,7 @@ public class CreatePrefabVariantFromPrefab : EditorWindow
 
     private MonoScript customScript;
 
-    [MenuItem("ArtTools/Model/创建预制体变体" , false , 122)]  
+    [MenuItem("ArtTools/Prefab/创建预制体变体" , false , 122)]  
     private static void ShowWindow()  
     {  
         GetWindow<CreatePrefabVariantFromPrefab>("Create Prefab Variant From Prefab");  

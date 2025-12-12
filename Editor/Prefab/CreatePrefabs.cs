@@ -16,7 +16,7 @@ namespace yuxuetian
         public static string localPath = "Assets/Art/";
         private bool isFbx;
 
-        [MenuItem("ArtTools/Model/创建预制体(无父类)", false, 120)]
+        [MenuItem("ArtTools/Prefab/创建预制体(无父类)", false, 120)]
         public static void ShowWindow()
         {
             EditorWindow window = GetWindow<CreatePrefabs>();
