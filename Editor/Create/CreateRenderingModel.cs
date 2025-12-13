@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace yuxuetian
 {
-    public class CustomCreateAsset
+    public class CreateRenderingModel
     {
         //实例化模型
         static void CustomInstanceModel(string path)

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "NewResourceTable", menuName = "Tools/Resource Table")]
+[CreateAssetMenu(fileName = "NewResourceTable", menuName = "ArtTools/Resource Table")]
 public class ResourceTableData : ScriptableObject
 {
     public enum ResourceStatus

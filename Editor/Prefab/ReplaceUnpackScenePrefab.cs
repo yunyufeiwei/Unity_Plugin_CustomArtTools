@@ -32,7 +32,7 @@ namespace yuxuetian
             @"\s+Instance \d+$",    // 空格+Instance 数字
         };
         
-        [MenuItem("ArtTools/Prefab/批量替换场景中的Prefab", false, 123)]
+        [MenuItem("ArtTools/Prefab/批量替换场景中的Prefab", false, 141)]
         public static void ShowWindow()
         {
             EditorWindow window = GetWindow<ReplaceUnpackScenePrefab>();
